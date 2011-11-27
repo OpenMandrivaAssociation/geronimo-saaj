@@ -3,7 +3,7 @@
 
 Name:             geronimo-saaj
 Version:          1.1
-Release:          4
+Release:          6
 Summary:          Java EE: SOAP with Attachments API Package v1.3
 Group:            Development/Java
 License:          ASL 2.0
