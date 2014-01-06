@@ -1,45 +1,32 @@
+%{?_javapackages_macros:%_javapackages_macros}
 %global spec_ver 1.3
 %global spec_name geronimo-saaj_%{spec_ver}_spec
 
 Name:             geronimo-saaj
 Version:          1.1
-Release:          6
+Release:          13.0%{?dist}
 Summary:          Java EE: SOAP with Attachments API Package v1.3
-Group:            Development/Java
-License:          ASL 2.0
+License:          ASL 2.0 and W3C
 
 URL:              http://geronimo.apache.org/
 Source0:          http://repo2.maven.org/maven2/org/apache/geronimo/specs/%{spec_name}/%{version}/%{spec_name}-%{version}-source-release.tar.gz
-Source1:          %{name}.depmap
-# Use parent pom files instead of unavailable 'genesis-java5-flava'
-Patch1:           use_parent_pom.patch
-BuildRoot:        %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:        noarch
 
-BuildRequires:    java-devel >= 0:1.6.0
+BuildRequires:    java-devel >= 1:1.6.0
 BuildRequires:    jpackage-utils
-BuildRequires:    maven2 >= 2.2.1
+BuildRequires:    maven-local
 BuildRequires:    geronimo-parent-poms
 BuildRequires:    maven-resources-plugin
 BuildRequires:    geronimo-osgi-locator
-
-Requires:         java >= 0:1.6.0
-Requires:         jpackage-utils
-Requires:         geronimo-osgi-locator
-
-Requires(post):   jpackage-utils
-Requires(postun): jpackage-utils
 
 Provides:         saaj_api = %{spec_ver}
 
 
 %description
-Provides the API for creating and building SOAP messages. 
+Provides the API for creating and building SOAP messages.
 
 %package javadoc
-Group:            Development/Java
 Summary:          Javadoc for %{name}
-Requires:         jpackage-utils
 
 %description javadoc
 This package contains the API documentation for %{name}.
@@ -48,58 +35,70 @@ This package contains the API documentation for %{name}.
 %prep
 %setup -q -n %{spec_name}-%{version}
 iconv -f iso8859-1 -t utf-8 LICENSE > LICENSE.conv && mv -f LICENSE.conv LICENSE
-sed -i 's/\r//' LICENSE
-%patch1 -p0
+sed -i 's/\r//' LICENSE NOTICE
+# Use parent pom files instead of unavailable 'genesis-java5-flava'
+%pom_set_parent org.apache.geronimo.specs:specs:1.4
+%pom_remove_dep :geronimo-activation_1.1_spec
+
+%mvn_alias : org.apache.geronimo.specs:geronimo-saaj_1.1_spec
+%mvn_alias : javax.xml.soap:saaj-api
+
+%mvn_file : %{name}
 
 %build
-export MAVEN_REPO_LOCAL=$(pwd)/.m2/repository
-mvn-jpp \
-        -e \
-        -Dmaven2.jpp.mode=true \
-        -Dmaven2.jpp.depmap.file="%{SOURCE1}" \
-        -Dmaven.repo.local=$MAVEN_REPO_LOCAL \
-        install javadoc:javadoc
+%mvn_build
 
 %install
-rm -rf %{buildroot}
+%mvn_install
 
-# jars
-install -d -m 0755 %{buildroot}%{_javadir}
-install -m 644 target/%{spec_name}-%{version}.jar %{buildroot}%{_javadir}/%{name}-%{version}.jar
-ln -s %{name}-%{version}.jar %{buildroot}%{_javadir}/%{name}.jar
-ln -s %{name}-%{version}.jar %{buildroot}%{_javadir}/saaj.jar
+%files -f .mfiles
+%doc LICENSE NOTICE
 
-# poms
-install -d -m 0755 %{buildroot}%{_mavenpomdir}
-install -pm 644 pom.xml %{buildroot}%{_mavenpomdir}/JPP-%{name}.pom
-%add_to_maven_depmap org.apache.geronimo.specs %{spec_name} %{version} JPP %{name}
-%add_to_maven_depmap org.apache.geronimo.specs geronimo-saaj_1.1_spec 1.1 JPP %{name}
-%add_to_maven_depmap javax.xml.soap saaj-api %{spec_ver} JPP %{name}
+%files javadoc -f .mfiles-javadoc
+%doc LICENSE NOTICE
 
-# javadoc
-install -d -m 0755 %{buildroot}%{_javadocdir}/%{name}-%{version}
-cp -pr target/site/api*/* %{buildroot}%{_javadocdir}/%{name}-%{version}/
-ln -s %{name}-%{version} %{buildroot}%{_javadocdir}/%{name}
+%changelog
+* Thu Aug  8 2013 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.1-13
+- Update to latest packaging guidelines
 
-%post
-%update_maven_depmap
+* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.1-12
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
 
-%postun
-%update_maven_depmap
+* Tue Mar 12 2013 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.1-11
+- Replace local depmap with POM macro
+- Resolves: rhbz#914030
 
-%clean
-rm -rf %{buildroot}
+* Wed Feb 13 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.1-10
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
 
-%files
-%defattr(-,root,root,-)
-%doc LICENSE
-%{_javadir}/*
-%{_mavenpomdir}/*
-%{_mavendepmapfragdir}/*
+* Wed Feb 06 2013 Java SIG <java-devel@lists.fedoraproject.org> - 1.1-9
+- Update for https://fedoraproject.org/wiki/Fedora_19_Maven_Rebuild
+- Replace maven BuildRequires with maven-local
 
-%files javadoc
-%defattr(-,root,root,-)
-%doc LICENSE
-%{_javadocdir}/%{name}-%{version}
-%{_javadocdir}/%{name}
+* Thu Aug 23 2012 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.1-8
+- Fix license tag
+- Remove dangling symlink
+- Update to current guidelines
 
+* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.1-7
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
+
+* Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.1-6
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
+
+* Wed Nov 30 2011 Alexander Kurtakov <akurtako@redhat.com> 1.1-5
+- Build with Maven 3.
+- Adapt to current guidelines.
+
+* Tue Feb 08 2011 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.1-4
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_15_Mass_Rebuild
+
+* Wed Aug 4 2010 Chris Spike <chris.spike@arcor.de> 1.1-3
+- Added 'org.apache.geronimo.specs:geronimo-saaj_1.1_spec' to maven depmap
+
+* Mon Aug 2 2010 Chris Spike <chris.spike@arcor.de> 1.1-2
+- Consistently using 'rm' now
+- Removed W3C from 'License:' field (XMLSchema.dtd not existent)
+
+* Thu Jul 22 2010 Chris Spike <chris.spike@arcor.de> 1.1-1
+- Initial version of the package
